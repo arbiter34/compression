@@ -1,11 +1,17 @@
 compression
 ===========
 
-Basic implementation of huffman coding in C
+## Description ##
 
-Usage:
+Basic implementation of huffman coding in C with a Command Line Interface.  
 
-compression [options] [source] [destination]
-	Options:
-		-c			Compress
-		-d			Decompress
+## How to Compile ##
+
+ -**Run:**: ./make
+
+## Usage ##
+
+<b>compression [options] [source] [destination]</b>
+	<br><br>Options:<br><br>
+		-**-c**:			Compress<br><br>
+		-**-d**:			Decompress
