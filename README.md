@@ -7,7 +7,7 @@ Basic implementation of huffman coding in C with a Command Line Interface.
 
 ## How to Compile ##
 
- **Run:** ./make
+ **./make**
 
 ## Usage ##
 
