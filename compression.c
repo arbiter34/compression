@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 
 	//Verify correct CLI usage
 	if (argc != 4) {
-		printf("Incorrect usage\n", argv[0]);
+		printf("Incorrect usage\n");
 		printUsage();
 		return -1;
 	}	
