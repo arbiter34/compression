@@ -12,7 +12,11 @@
 
 #ifndef _COMPRESSION_H_
 #define _COMPRESSION_H_
+//Max desired RAM footprint, actual size should be targeted value +.8
+#define MAX_RAM 32
 
+	const int BLOCK_SIZE = 1;
+	
 	typedef struct EncodeLetter EncodeLetter;
 	struct EncodeLetter {
 		unsigned int bits;
@@ -40,5 +44,7 @@
 	void compressFile(char* filein, char* fileout);
 
 	void decompressFile(char* filein, char* fileout);
+	
+	unsigned int getFileSize(FILE *fp);
 
 #endif

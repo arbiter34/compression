@@ -17,7 +17,7 @@
 #include "compression.h"
 
 //bitstream file i/o buffers
-unsigned char output, input;
+unsigned char input;
 
 //bit index for bitstream file i/o
 int read_bit_count = 0;
@@ -27,7 +27,7 @@ int write_bit_count = 0;
 int tree_bit_length;
 
 //input byte buffer
-unsigned char *buffer;
+unsigned char *buffer, *output;
 
 
 int main(int argc, char *argv[]) {
@@ -77,8 +77,9 @@ void compressFile(char* filein, char* fileout) {
 	
 	//allocate arrays
 	unsigned int *char_frequency = (unsigned int *)malloc(sizeof(int)*256);
-	buffer = (unsigned char *)malloc(sizeof(char)*256);
-
+	buffer = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
+	output = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
+	
 	//Attempt open file stream
 	FILE *fp = fopen(filein, "r");
 
@@ -86,20 +87,21 @@ void compressFile(char* filein, char* fileout) {
 	if (fp == NULL) {
 		printf("Error: Couldn't open %s\n", filein);
 		return;
-	}
+	} 
 	
 	//init char_frequency array
 	for (int i = 0; i < 256; i++) {
 		char_frequency[i] = 0;
 	}
-	unsigned int file_size = 0;
+	unsigned int file_size = getFileSize(fp);
+	printf("File size: %i\n", file_size);
 	
 	//Read in file
-	while (fread(buffer, sizeof(char), 1, fp) > 0) {
-		char_frequency[buffer[0]]++;
-		file_size++;
+	while (fread(buffer, sizeof(char), BLOCK_SIZE, fp) > 0) {
+		for (int i = 0; i < BLOCK_SIZE; i++) {
+			char_frequency[buffer[i]]++;
+		}
 	}
-	printf("File size: %i\n", file_size);
 	
 	
 	//built frequency array, close file to avoid resource collisions
@@ -133,7 +135,9 @@ void compressFile(char* filein, char* fileout) {
 		printf("Error: Couldn't open %s\n", fileout);
 		return;
 	}	
-	output = 0;
+	for (int i = 0; i < BLOCK_SIZE; i++) {
+		output[i] = 0;
+	}
 	write_bit_count = 0;
 	
 	fwrite(&file_size, sizeof(file_size), 1, out);
@@ -141,20 +145,30 @@ void compressFile(char* filein, char* fileout) {
 	//write btree to file	
 	writeTreeToFile(bt, out);
 	
+	int count = 0;
 	//Read in file byte by byte and output bit by bit via charmap
-	while (fread(buffer, sizeof(unsigned char), 1, fp) > 0) {
-		for (int i = (encodedCharMap[buffer[0]]->bits)-1; i >= 0; i--) {
-		
-			//reveal each bit per encodedChar
-			char bit = ((1<<i) & encodedCharMap[buffer[0]]->value) == 0 ? 0 : 1;
+	while (fread(buffer, sizeof(unsigned char), BLOCK_SIZE, fp) > 0) {
+		for (int y = 0; y < BLOCK_SIZE; y++) {	
+			for (int i = (encodedCharMap[buffer[y]]->bits)-1; i >= 0; i--) {
 			
-			writeBitToFile(1, bit, out);
+				//reveal each bit per encodedChar
+				char bit = ((1<<i) & encodedCharMap[buffer[y]]->value) == 0 ? 0 : 1;
+				
+				writeBitToFile(1, bit, out);
+			}
+			count++;
+			if (count == file_size) {
+				break;
+			}
 		}
 	}
 	
 	//check for partial byte in bit write buffer
 	if (write_bit_count % 8 != 0) {
-		char part = output;
+		//grab write buffer
+		char part = output[count%BLOCK_SIZE]; 
+		
+		//write it out to file with correct shift
 		writeBitToFile(8, part, out);
 	}
 	
@@ -182,25 +196,37 @@ void decompressFile(char* filein, char* fileout) {
 	FILE *in = fopen(filein, "r");
 	FILE *out = fopen(fileout, "w");
 	
+	//reset bit indexes
 	write_bit_count = 0;
 	read_bit_count = 0;
 
 	buffer = (unsigned char*)malloc(sizeof(char)*2);
 	
+	//get file size from header
 	unsigned int file_size = 0;
 	fread(&file_size, sizeof(file_size), 1, in);
 	
+	//build tree from header
 	Node *head = readTreeFromFile(in);
 	
+	//get offset for decoding to begin(tree length + sizeof file_size)
 	unsigned long int offset = (tree_bit_length/8)+sizeof(file_size)+1;
 
+	//seek to start of decoding
 	fseek(in, offset, SEEK_SET);
 
+	//decode until end of file
 	while (!feof(in)) {
+		
+		//decode letter
 		unsigned char c = decompressChar(head, in);
+		
+		//necessary check to avoid decoding the trailing zeros on the last byte
 		if (ftell(out) >= file_size) {
 			break;
 		}
+		
+		//write decoded letter to out file
 		fwrite(&c, sizeof(unsigned char), 1, out);
 	}
 		
@@ -289,16 +315,7 @@ void buildCharMap(Node *n, EncodeLetter *encodeArray[], size_t size, unsigned in
 	if (n->terminal) {
 		encodeArray[n->letter] = (EncodeLetter *)malloc(sizeof(EncodeLetter)*1);
 		encodeArray[n->letter]->value = value;
-		encodeArray[n->letter]->bits = bits;
-		printf("char: %i  bits: %i  value: %i  string: ", n->letter, bits, value);
-		for (int i = bits-1; i >= 0; i--) {
-			if ((1<<i) & value) {
-				printf("1");
-			} else {
-				printf("0");
-			}
-		}	
-		printf("\n");		
+		encodeArray[n->letter]->bits = bits;				
 	} else {
 		bits++;
 		buildCharMap(n->left, encodeArray, size, (value<<1)+0, bits);
@@ -433,12 +450,14 @@ void writeTreeToFile(Node *n, FILE *out) {
  */
 void writeBitToFile(int count, char byte, FILE *out) {
 	for (int i = count-1; i >=0; i--) {
-		output = (output<<1) + ((1<<i&byte) == 0 ? 0 : 1);
+		output[write_bit_count/8] = (output[write_bit_count/8]<<1) + ((1<<i&byte) == 0 ? 0 : 1);
 		write_bit_count++;
-		if (write_bit_count == 8) {
-			fwrite(&output, sizeof(char), 1, out);
+		if (write_bit_count == (8*BLOCK_SIZE)) {
+			fwrite(output, sizeof(char), BLOCK_SIZE, out);
 			write_bit_count = 0;
-			output = 0;
+			for (int i = 0; i < BLOCK_SIZE; i++) {
+				output[i] = 0;
+			}
 		}
 	}
 }
@@ -454,4 +473,20 @@ void writeBitToFile(int count, char byte, FILE *out) {
  */
 void printUsage(char *argv1) {
 	printf("Usage:\n\n%s [options] [source] [destination]\n\tOptions:\n\t\t-c\tCompress\n\t\t-d\tDecompress", argv1);
+}
+
+/*
+ *  getFileSize
+ *
+ *  Function: returns file size in bytes
+ *
+ *  Arguments: Filestream pointer
+ *
+ *  Returns: int with file size in bytes
+ */
+unsigned int getFileSize(FILE *fp) {
+	fseek(fp, 0L, SEEK_END);
+	unsigned int size = ftell(fp);
+	fseek(fp, 0L, SEEK_SET);
+	return size;
 }
