@@ -1,5 +1,4 @@
-/* ---------------------------------------------------------------------------
-** This software is in the public domain, furnished "as is", without technical
+/
 ** support, and with no warranty, express or implied, as to its usefulness for
 ** any purpose.
 **
@@ -10,7 +9,6 @@
 ** -------------------------------------------------------------------------*/
 
 #include <stdio.h>
-#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include "BinaryTree.h"
@@ -32,77 +30,35 @@ unsigned char *buffer, *output;
 
 
 int main(int argc, char *argv[]) {
+
+
 	//Verify correct CLI usage
-	if (argc != 1) {
-		printf("Incorrect usage\n");
+	if (argc != 4) {
+		printf("Incorrect usage\n", argv[0]);
+		printUsage();
 		return -1;
 	}	
 
-	while (true) {
 
-		printMenu();
-		int option = 0;
-		if (scanf("%i", &option) < 0) {
-			printf("\n\nInvalid Entry. Try again.\n\n");
-			continue;
-		}
-		
-		FileNames *fn = NULL;
-		switch(option){
-			case 1:
-				fn = getFileNames();
-				compressFile(fn->fileIn, fn->fileOut);
-				break;
-			case 2:
-				fn = getFileNames();
-				
-				decompressFile(fn->fileIn, fn->fileOut);
-				break;
-			default:
-				printf("Exiting...\n\n", argv[1]);
-				exit(0);
-		}
+	char *filein = argv[2];
+	char *fileout = argv[3];
+
+	switch(argv[1][1]){
+		case 'c':
+			compressFile(filein, fileout);
+			break;
+		case 'd':
+			decompressFile(filein, fileout);
+			break;
+		default:
+			printf("%s is not a valid option.\n\n", argv[1]);
+			printUsage(argv[0]);
+			break;
 	}
 	
 	
 	
 	return 0;
-}
-
-FileNames *getFileNames() {
-	FileNames *fn = (FileNames *)malloc(sizeof(FileNames)*1);
-	char buffer[255];
-	int character_count = 0;
-	while (true) {
-		printf("\n\nEnter the input file path and name: ");
-		if (scanf("%s", &buffer) < 0) {
-			printf("\n\nInvalid entry\\n\n");
-			continue;
-		}
-		character_count = strlen(buffer);
-		fn->fileIn = (char*)malloc(sizeof(char)*character_count);
-		strncpy(fn->fileIn, buffer, sizeof(char)*character_count);
-		
-		printf("\n\nEnter the output file path and name: ");
-		if (scanf("%s", &buffer) < 0) {
-			printf("\n\nInvalid entry\\n\n");
-			continue;
-		}
-		
-		character_count = strlen(buffer);
-		fn->fileOut = (char*)malloc(sizeof(char)*character_count);
-		strncpy(fn->fileOut, buffer, sizeof(char)*character_count);
-		
-		break;
-	}
-	return fn;
-}
-
-void printMenu() {
-	printf("\n\n1. Compress File");
-	printf("\n\n2. Decompress File");
-	printf("\n\n3. Exit\n\n");
-	printf("Make a selection: ");
 }
 
 
@@ -117,6 +73,7 @@ void printMenu() {
  *	Returns: None
  */
 void compressFile(char* filein, char* fileout) {
+	
 	//allocate arrays
 	unsigned int *char_frequency = (unsigned int *)malloc(sizeof(int)*256);
 	
@@ -131,7 +88,7 @@ void compressFile(char* filein, char* fileout) {
 
 	//Check if file pointer is valid
 	if (fp == NULL) {
-		printf("ShitError: Couldn't open %s\n", filein);
+		printf("Error: Couldn't open %s\n", filein);
 		return;
 	} 
 	
@@ -248,8 +205,7 @@ void decompressFile(char* filein, char* fileout) {
 	
 	free(buffer);
 	free(output);
-	
-	buffer = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
+	buffer = (unsigned char*)malloc(sizeof(char)*2);
 	output = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
 	
 	//get file size from header
@@ -539,4 +495,4 @@ unsigned int getFileSize(FILE *fp) {
 	unsigned int size = ftell(fp);
 	fseek(fp, 0L, SEEK_SET);
 	return size;
-}
+}}

@@ -1,6 +1,7 @@
 CC=gcc
 CFLAGS=-c -std=c99
 LDFLAGS=
+LDLIBS= -lpthread
 SOURCES=compression.c PriorityQueue.c BinaryTree.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=compression
