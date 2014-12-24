@@ -77,10 +77,6 @@ void compressFile(char* filein, char* fileout) {
 	
 	//allocate arrays
 	unsigned int *char_frequency = (unsigned int *)malloc(sizeof(int)*256);
-	
-	free(buffer);
-	free(output);
-	
 	buffer = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
 	output = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
 	
@@ -203,11 +199,8 @@ void decompressFile(char* filein, char* fileout) {
 	//reset bit indexes
 	write_bit_count = 0;
 	read_bit_count = 0;
-	
-	free(buffer);
-	free(output);
+
 	buffer = (unsigned char*)malloc(sizeof(char)*2);
-	output = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
 	
 	//get file size from header
 	unsigned int file_size = 0;
