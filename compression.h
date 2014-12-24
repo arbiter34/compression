@@ -9,19 +9,33 @@
 **
 ** Author: Travis Alpers - arbiter34@gmail.com
 ** -------------------------------------------------------------------------*/
-
+ 
 #ifndef _COMPRESSION_H_
 #define _COMPRESSION_H_
 //Max desired RAM footprint, actual size should be targeted value +.8
-#define MAX_RAM 32
-
+	#define MAX_RAM 32
+	#define true 1
+	#define false 0
+	
 	const int BLOCK_SIZE = 1;
+	
+	 
 	
 	typedef struct EncodeLetter EncodeLetter;
 	struct EncodeLetter {
 		unsigned int bits;
 		unsigned int value;
 	};
+	
+	typedef struct FileNames FileNames;
+	struct FileNames {
+		char *fileIn;
+		char *fileOut;
+	};
+	
+	FileNames *getFileNames();
+	
+	void printMenu();
 	
 	PQNode* buildPriorityQueue(unsigned int *char_frequency);
 	
