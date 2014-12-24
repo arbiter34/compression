@@ -21,8 +21,8 @@
 unsigned char input;
 
 //bit index for bitstream file i/o
-int read_bit_count = 0;
-int write_bit_count = 0;
+int read_bit_count;
+int write_bit_count;
 
 //length of tree in bits in file
 int tree_bit_length;
@@ -80,6 +80,7 @@ FileNames *getFileNames() {
 			continue;
 		}
 		character_count = strlen(buffer);
+		printf("\nString length: %i\n", character_count);
 		fn->fileIn = (char*)malloc(sizeof(char)*character_count);
 		strncpy(fn->fileIn, buffer, sizeof(char)*character_count);
 		
@@ -123,6 +124,10 @@ void compressFile(char* filein, char* fileout) {
 	free(buffer);
 	free(output);
 	
+	input = 0;
+	read_bit_count = 0;
+	write_bit_count = 0;
+	
 	buffer = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
 	output = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
 	
@@ -131,7 +136,7 @@ void compressFile(char* filein, char* fileout) {
 
 	//Check if file pointer is valid
 	if (fp == NULL) {
-		printf("ShitError: Couldn't open %s\n", filein);
+		printf("Error: Couldn't open %s\n", filein);
 		return;
 	} 
 	
@@ -140,6 +145,11 @@ void compressFile(char* filein, char* fileout) {
 		char_frequency[i] = 0;
 	}
 	unsigned int file_size = getFileSize(fp);
+	if (file_size == 0) {
+		printf("File size is 0 bytes. Aborting...\n");
+		return;
+	}
+	
 	printf("File size: %i\n", file_size);
 	
 	//Read in file
@@ -220,8 +230,12 @@ void compressFile(char* filein, char* fileout) {
 	
 
 
-	fclose(fp);
-	fclose(out);
+	if (fclose(fp) != 0) {
+		printf("FileIn did not close correctly.\n");
+	}
+	if (fclose(out) != 0) {
+		printf("FileOut did not close correctly.\n");
+	}
 	
 	printf("\nThe file %s was compressed to %s successfully!\n", filein, fileout);
 }
@@ -238,23 +252,36 @@ void compressFile(char* filein, char* fileout) {
  *	Returns: None
  */
 void decompressFile(char* filein, char* fileout) {
-
+	printf("%s  %s\n", filein, fileout);
 	FILE *in = fopen(filein, "r");
 	FILE *out = fopen(fileout, "w");
+	
+	//Check if file pointer is valid
+	if (in == NULL) {
+		printf("Error: Couldn't open %s\n", filein);
+		return;
+	}
+	//Check if file pointer is valid
+	if (out == NULL) {
+		printf("Error: Couldn't open %s\n", fileout);
+		return;
+	}
 	
 	//reset bit indexes
 	write_bit_count = 0;
 	read_bit_count = 0;
+	
+	input = 0;
 	
 	free(buffer);
 	free(output);
 	
 	buffer = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
 	output = (unsigned char *)malloc(sizeof(char)*BLOCK_SIZE);
-	
 	//get file size from header
 	unsigned int file_size = 0;
 	fread(&file_size, sizeof(file_size), 1, in);
+	printf("test\n");
 	
 	//build tree from header
 	Node *head = readTreeFromFile(in);
